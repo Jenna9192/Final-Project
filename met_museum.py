@@ -3,6 +3,7 @@ import json
 import os
 import json
 import requests
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -41,16 +42,25 @@ def get_swapi_info(url, params=None):
         print("Exception")
         return None
     
-def cache_all_pages(people_url, filename):
+def cache_all_pages(artifact_url, filename):
     data = load_json(filename)
-    
-    for i in range(1,10):
-        page_number = "page " + str(i)
-        if page_number not in data.keys():
-            data_lst = get_swapi_info(people_url, params={"page": i})
-            data[page_number] = data_lst["results"]
-    
-    write_json(filename, data)
+
+    count = 1
+    artifacts = get_swapi_info(artifact_url)
+    artifacts_ids = artifacts["objectIDs"]
+    for i in range(100):
+        index = random.randint(0,len(artifacts_ids) - 1)
+        object_id = str(artifacts_ids[index])
+        print (object_id)
+        if object_id not in data.keys():
+            response = requests.get(f"https://collectionapi.metmuseum.org/public/collection/v1/objects/{object_id}")
+
+            # Check if the request was successful
+            if response.status_code == 200:
+            # Save the response data to a JSON file
+                data[str(count)] = response.json()
+                write_json(filename, data)
+        count += 1
 
 
 
@@ -61,7 +71,10 @@ def main():
     filename = dir_path + '/' + "met.json"
     cache = load_json(filename)
     url = "https://collectionapi.metmuseum.org/public/collection/v1/objects"
-    info = get_swapi_info(url)
-    print(info)
+    cache_all_pages(url, "met_data.json")
+
+
+
+
 if __name__ == "__main__":
     main()  
