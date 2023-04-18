@@ -61,6 +61,7 @@ def main():
     filename = dir_path + '/' + "met.json"
     cache = load_json(filename)
     url = "https://collectionapi.metmuseum.org/public/collection/v1/objects"
-
+    info = get_swapi_info(url)
+    print(info)
 if __name__ == "__main__":
     main()  
