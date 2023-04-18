@@ -23,7 +23,18 @@ def load_json(filename):
         data = []
         return data
 
-
+def get_api_info(url, params=None):
+    if params is not None:
+        r = requests.get(url, params=params)
+    else:
+        r = requests.get(url)
+    
+    if r.status_code == 200:
+        return r.json()
+    else:
+        print("Exception- cannot get json")
+        return None
+    
 def open_database(db_name):
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db_name)
@@ -34,17 +45,7 @@ def write_json(filename, dict):
     with open(filename, 'w') as f:
         json.dump(dict, f, indent=4)
 
-def get_api_info(url, params=None):
-    if params is not None:
-        r = requests.get(url, params=params)
-    else:
-        r = requests.get(url)
-    
-    if r.status_code == 200:
-        return r.json()
-    else:
-        print("Exception")
-        return None
+
     
 def cache_all_pages(people_url, filename):
     data = load_json(filename)
