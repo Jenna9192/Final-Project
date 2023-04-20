@@ -100,7 +100,7 @@ def make_culture_data(data, cur, conn):
     cultures = []
     for art in data:
         culture= data[art]["culture"]
-        if (len(culture)== 0) :
+        if (len(culture)== 0):
             culture = 'N/A'
         if culture not in cultures:
             cultures.append(culture)
@@ -109,6 +109,28 @@ def make_culture_data(data, cur, conn):
         cur.execute("INSERT OR IGNORE INTO met_cultures (id, culture) VALUES (?,?)",(i, cultures[i]))
     conn.commit()
 
+def make_location_data(data, cur, conn):
+    locations = []
+    for art in data:
+        location = data[art]["region"]
+        if (len(location)== 0):
+            location = data[art]["subregion"]
+            if (len(location)== 0):
+                location = data[art]["country"]
+                if (len(location)== 0):
+                    location = data[art]["county"]
+                    if (len(location)== 0):
+                        location = data[art]["state"]
+                        if (len(location)== 0):
+                            location = data[art]["city"]
+                            if (len(location)== 0):
+                                location = 'N/A'
+        if location not in locations:
+            locations.append(location)
+    cur.execute("CREATE TABLE IF NOT EXISTS met_locations (id INTEGER PRIMARY KEY, location TEXT UNIQUE)")
+    for i in range(0,len(locations)):
+        cur.execute("INSERT OR IGNORE INTO met_locations (id, location) VALUES (?,?)",(i, locations[i]))
+    conn.commit()
 
 def main():
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -121,6 +143,7 @@ def main():
     make_period_data(data, cur1, conn1)
     make_medium_data(data, cur1, conn1)
     make_culture_data(data, cur1, conn1)
+    make_location_data(data, cur1, conn1)
 
 
 if __name__ == "__main__":
