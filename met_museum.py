@@ -69,13 +69,27 @@ def open_database(db_name):
 
 def make_period_data(data, cur, conn):
     cur.execute("DROP TABLE IF EXISTS met_periods")
-    periods = []
+    periods = ["N/A"]
     for art in data:
         period = data[art]["period"]
         if (len(period)== 0):
-            period = 'N/A'
-        if period not in periods:
+            continue
+        if "," in period:
+            period = period.split(",")
+            for word in period:
+                word.lstrip()
+        if "/" in period:
+            period = period.split("/")
+            for word in period:
+                word.lstrip()
+        if type(period) == list:
+            for word in period:
+                if word not in periods:
+                    word.strip()
+                    periods.append(word)
+        elif period not in periods:
             periods.append(period)
+    print(periods)
     cur.execute("CREATE TABLE IF NOT EXISTS met_periods (id INTEGER PRIMARY KEY, period TEXT UNIQUE)")
     for i in range(0,len(periods)):
         cur.execute("INSERT OR IGNORE INTO met_periods (id, period) VALUES (?,?)",(i, periods[i]))
