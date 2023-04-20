@@ -85,11 +85,9 @@ def make_period_data(data, cur, conn):
         if type(period) == list:
             for word in period:
                 if word not in periods:
-                    word.strip()
                     periods.append(word)
         elif period not in periods:
             periods.append(period)
-    print(periods)
     cur.execute("CREATE TABLE IF NOT EXISTS met_periods (id INTEGER PRIMARY KEY, period TEXT UNIQUE)")
     for i in range(0,len(periods)):
         cur.execute("INSERT OR IGNORE INTO met_periods (id, period) VALUES (?,?)",(i, periods[i]))
@@ -194,6 +192,131 @@ def make_location_data(data, cur, conn):
         cur.execute("INSERT OR IGNORE INTO met_locations (id, location) VALUES (?,?)",(i, locations[i]))
     conn.commit()
 
+
+def make_met_data(data, cur, conn):
+    cur.execute("DROP TABLE IF EXISTS met_database")
+    for art in data:
+        id = int(art)
+        museum_id = 1
+        object_id = data[art]["objectID"]
+        title = data[art]["title"]
+        artist = data[art]["artistDisplayName"]
+        if len(artist) == 0:
+            artist = "N/A"
+        year = data[art]["objectEndDate"]
+
+        #identify medium
+        cur.execute("SELECT medium, id FROM met_mediums")
+        medium_dict = dict(cur.fetchall())
+
+        medium = data[art]["classification"]
+        if (len(medium)== 0):
+            medium = data[art]["medium"]
+            if (len(medium) == 0) or medium == "[no medium available]":
+                medium = 'N/A'
+        book = ["Books", "Codices"]
+        for spelling in book:
+            if spelling in medium:
+                medium = "Books"
+        photography = ["Negatives", "Photographs"]
+        for spelling in photography:
+            if spelling in medium:
+                medium = "Photographs"
+        ceramic = ["Ceramics", "Ceramic", "ceramic", "ceramics", "Faience", "terracottas"]
+        for spelling in ceramic:
+            if spelling in medium:
+                medium = "Ceramics"
+        paper = ["Paper", "paper"]
+        for spelling in paper:
+            if spelling in medium:
+                medium = "Paper"
+        glass = ["glass", "Glass"]
+        metalwork = ["Metalwork", "copper", "gold", "Krisses"]
+        for spelling in metalwork:
+            if spelling in medium:
+                medium = "Metalwork"
+        for spelling in glass:
+            if spelling in medium:
+                medium = "Glass"
+        vase = ["Vase", "Vases", "vase", "vases"]
+        for spelling in vase:
+            if spelling in medium:
+                medium = "Vases"
+        if medium.startswith("Textiles"):
+            medium = "Textiles"
+        Textiles = ["Linen", "linen", "leather", "Wool", "Cotton"]
+        for spelling in Textiles:
+            if spelling in medium:
+                medium = "Textiles"
+        if medium.startswith("Wood"):
+            medium = "Wood"
+        if medium.endswith("Ornaments"):
+            medium = "Ornaments"
+        ivory = ["Ivory", "Ivories", "ivory", "ivories"]
+        for spelling in ivory:
+            if spelling in medium:
+                medium = "Ivory"
+        medium_id = medium_dict[medium]
+
+        #identifying culture
+        cur.execute("SELECT culture, id FROM met_cultures")
+        culture_dict = dict(cur.fetchall())
+        culture= data[art]["culture"]
+        if (len(culture)== 0 or culture.startswith('Unknown')):
+            culture = 'N/A'
+        culture_id = culture_dict[culture]
+
+        #identify location
+        cur.execute("SELECT location, id FROM met_locations")
+        location_dict = dict(cur.fetchall())
+        location = data[art]["region"]
+        if (len(location)== 0):
+            location = data[art]["subregion"]
+            if (len(location)== 0):
+                location = data[art]["country"]
+                if (len(location)== 0):
+                    location = data[art]["county"]
+                    if (len(location)== 0):
+                        location = data[art]["state"]
+                        if (len(location)== 0):
+                            location = data[art]["city"]
+                            if (len(location)== 0):
+                                location = 'N/A'
+        word = "Iran"
+        if word in str(location):
+            location = word
+        location_id = location_dict[location]
+
+        #identify period
+        cur.execute("SELECT period, id FROM met_periods")
+        period_dict = dict(cur.fetchall())
+        period = data[art]["period"]
+        if (len(period)== 0):
+            period = "N/A"
+            continue
+        elif "," in period:
+            period = period.split(",")
+            for word in period:
+                word.lstrip()
+        elif "/" in period:
+            period = period.split("/")
+            for word in period:
+                word.lstrip()
+
+        if type(period) == list:
+            period_id = []
+            for per in period:
+                period_id = period_dict[per]
+        else:
+            period_id = period_dict[period]
+        
+
+
+
+    conn.commit()
+
+
+
 def main():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     filename = dir_path + '/' + "met.json"
@@ -206,7 +329,7 @@ def main():
     make_medium_data(data, cur1, conn1)
     make_culture_data(data, cur1, conn1)
     make_location_data(data, cur1, conn1)
-
+    make_met_data(data,cur1, conn1)
 
 if __name__ == "__main__":
     main()  
