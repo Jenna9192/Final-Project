@@ -68,6 +68,7 @@ def open_database(db_name):
     return cur, conn
 
 def make_period_data(data, cur, conn):
+    cur.execute("DROP TABLE IF EXISTS met_periods")
     periods = []
     for art in data:
         period = data[art]["period"]
@@ -81,7 +82,7 @@ def make_period_data(data, cur, conn):
     conn.commit()
 
 def make_medium_data(data, cur, conn):
-    count = 0
+    cur.execute("DROP TABLE IF EXISTS met_mediums")
     mediums = []
     for art in data:
         medium = data[art]["classification"]
@@ -89,6 +90,48 @@ def make_medium_data(data, cur, conn):
             medium = data[art]["medium"]
             if (len(medium) == 0) or medium == "[no medium available]":
                 medium = 'N/A'
+        book = ["Books", "Codices"]
+        for spelling in book:
+            if spelling in medium:
+                medium = "Books"
+        photography = ["Negatives", "Photographs"]
+        for spelling in photography:
+            if spelling in medium:
+                medium = "Photographs"
+        ceramic = ["Ceramics", "Ceramic", "ceramic", "ceramics", "Faience", "terracottas"]
+        for spelling in ceramic:
+            if spelling in medium:
+                medium = "Ceramics"
+        paper = ["Paper", "paper"]
+        for spelling in paper:
+            if spelling in medium:
+                medium = "Paper"
+        glass = ["glass", "Glass"]
+        metalwork = ["Metalwork", "copper", "gold", "Krisses"]
+        for spelling in metalwork:
+            if spelling in medium:
+                medium = "Metalwork"
+        for spelling in glass:
+            if spelling in medium:
+                medium = "Glass"
+        vase = ["Vase", "Vases", "vase", "vases"]
+        for spelling in vase:
+            if spelling in medium:
+                medium = "Vases"
+        if medium.startswith("Textiles"):
+            medium = "Textiles"
+        Textiles = ["Linen", "linen", "leather", "Wool", "Cotton"]
+        for spelling in Textiles:
+            if spelling in medium:
+                medium = "Textiles"
+        if medium.startswith("Wood"):
+            medium = "Wood"
+        if medium.endswith("Ornaments"):
+            medium = "Ornaments"
+        ivory = ["Ivory", "Ivories", "ivory", "ivories"]
+        for spelling in ivory:
+            if spelling in medium:
+                medium = "Ivory"
         if medium not in mediums:
             mediums.append(medium)
     cur.execute("CREATE TABLE IF NOT EXISTS met_mediums (id INTEGER PRIMARY KEY, medium TEXT UNIQUE)")
@@ -97,10 +140,11 @@ def make_medium_data(data, cur, conn):
     conn.commit()
 
 def make_culture_data(data, cur, conn):
+    cur.execute("DROP TABLE IF EXISTS met_cultures")
     cultures = []
     for art in data:
         culture= data[art]["culture"]
-        if (len(culture)== 0):
+        if (len(culture)== 0 or culture.startswith('Unknown')):
             culture = 'N/A'
         if culture not in cultures:
             cultures.append(culture)
@@ -110,6 +154,7 @@ def make_culture_data(data, cur, conn):
     conn.commit()
 
 def make_location_data(data, cur, conn):
+    cur.execute("DROP TABLE IF EXISTS met_location")
     locations = []
     for art in data:
         location = data[art]["region"]
@@ -125,6 +170,9 @@ def make_location_data(data, cur, conn):
                             location = data[art]["city"]
                             if (len(location)== 0):
                                 location = 'N/A'
+        word = "Iran"
+        if word in str(location):
+            location = word
         if location not in locations:
             locations.append(location)
     cur.execute("CREATE TABLE IF NOT EXISTS met_locations (id INTEGER PRIMARY KEY, location TEXT UNIQUE)")
