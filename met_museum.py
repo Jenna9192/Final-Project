@@ -193,10 +193,13 @@ def make_location_data(data, cur, conn):
     conn.commit()
 
 
-def make_met_data(data, cur, conn):
-    cur.execute("DROP TABLE IF EXISTS met_database")
-    for art in data:
-        id = int(art)
+def make_met_data(data, cur, conn, index):
+    cur.execute("CREATE TABLE IF NOT EXISTS met_database (id INTEGER PRIMARY KEY, Museum_id INTEGER, object_id INTEGER, title TEXT, artist TEXT, year INTEGER, medium_id INTEGER, culture_id INTEGER, location_id INTEGER, Period_id INTEGER)")
+    for i in range(25):
+        index += 1
+        art = list(data.keys())
+        place = index - 1
+        art = art[place]
         museum_id = 1
         object_id = data[art]["objectID"]
         title = data[art]["title"]
@@ -257,7 +260,7 @@ def make_met_data(data, cur, conn):
             if spelling in medium:
                 medium = "Ivory"
         medium_id = medium_dict[medium]
-
+        
         #identifying culture
         cur.execute("SELECT culture, id FROM met_cultures")
         culture_dict = dict(cur.fetchall())
@@ -265,7 +268,7 @@ def make_met_data(data, cur, conn):
         if (len(culture)== 0 or culture.startswith('Unknown')):
             culture = 'N/A'
         culture_id = culture_dict[culture]
-
+        
         #identify location
         cur.execute("SELECT location, id FROM met_locations")
         location_dict = dict(cur.fetchall())
@@ -286,14 +289,13 @@ def make_met_data(data, cur, conn):
         if word in str(location):
             location = word
         location_id = location_dict[location]
-
+        
         #identify period
         cur.execute("SELECT period, id FROM met_periods")
         period_dict = dict(cur.fetchall())
         period = data[art]["period"]
         if (len(period)== 0):
             period = "N/A"
-            continue
         elif "," in period:
             period = period.split(",")
             for word in period:
@@ -309,8 +311,20 @@ def make_met_data(data, cur, conn):
                 period_id = period_dict[per]
         else:
             period_id = period_dict[period]
-        
 
+        art = int(art)
+        museum_id = int(museum_id)
+        object_id = int(object_id)
+        title = str(title)
+        artist = str(artist)
+        year = int(year)
+        medium_id = int(medium_id)
+        culture_id = int(culture_id)
+        location_id = int(location_id)
+        period_id = int(period_id)
+        
+        cur.execute("INSERT OR IGNORE INTO met_database (id, Museum_id, object_id, title, artist, year, medium_id, culture_id, location_id, period_id) VALUES (?,?,?,?,?,?,?,?,?,?)",(art, museum_id, object_id, title, artist, year, medium_id, culture_id, location_id, period_id))
+        
 
 
     conn.commit()
@@ -329,7 +343,22 @@ def main():
     make_medium_data(data, cur1, conn1)
     make_culture_data(data, cur1, conn1)
     make_location_data(data, cur1, conn1)
-    make_met_data(data,cur1, conn1)
+    index = 0
+    #check if the database exist
+    cur1.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='met_database'")
+    #if does not exist
+    if cur1.fetchone() is None:
+        make_met_data(data, cur1, conn1, index) 
+    else:
+        cur1.execute("SELECT id FROM met_database")
+        id = cur1.fetchall()
+        if len(id) != 0:
+            index = id[-1][0]
+        if (index == 100):
+            cur1.execute("DROP TABLE IF EXISTS met_database")
+            index = 0
+        make_met_data(data, cur1, conn1, index)
+    #make_met_data(data,cur1, conn1, index)
 
 if __name__ == "__main__":
     main()  
