@@ -61,12 +61,6 @@ def setUpDatabase(db_name):
     cur = conn.cursor()
     return cur, conn
 
-def open_database(db_name):
-    path = os.path.dirname(os.path.abspath(__file__))
-    conn = sqlite3.connect(path+'/'+db_name)
-    cur = conn.cursor()
-    return cur, conn
-
 def make_period_data(data, cur, conn):
     cur.execute("DROP TABLE IF EXISTS met_periods")
     periods = ["N/A"]
