@@ -62,7 +62,6 @@ def setUpDatabase(db_name):
     return cur, conn
 
 def make_period_data(data, cur, conn):
-    cur.execute("DROP TABLE IF EXISTS met_periods")
     periods = ["N/A"]
     for art in data:
         period = data[art]["period"]
@@ -88,7 +87,6 @@ def make_period_data(data, cur, conn):
     conn.commit()
 
 def make_medium_data(data, cur, conn):
-    cur.execute("DROP TABLE IF EXISTS met_mediums")
     mediums = []
     for art in data:
         medium = data[art]["classification"]
@@ -146,7 +144,6 @@ def make_medium_data(data, cur, conn):
     conn.commit()
 
 def make_culture_data(data, cur, conn):
-    cur.execute("DROP TABLE IF EXISTS met_cultures")
     cultures = []
     for art in data:
         culture= data[art]["culture"]
@@ -160,7 +157,6 @@ def make_culture_data(data, cur, conn):
     conn.commit()
 
 def make_location_data(data, cur, conn):
-    cur.execute("DROP TABLE IF EXISTS met_location")
     locations = []
     for art in data:
         location = data[art]["region"]
@@ -349,10 +345,9 @@ def main():
         if len(id) != 0:
             index = id[-1][0]
         if (index == 100):
-            cur1.execute("DROP TABLE IF EXISTS met_database")
+            cur1.execute("DELETE FROM met_database")
             index = 0
         make_met_data(data, cur1, conn1, index)
-    #make_met_data(data,cur1, conn1, index)
 
 if __name__ == "__main__":
     main()  
