@@ -5,7 +5,7 @@
         "pages": 2436,
         "page": 1,
         "next": "https://api.harvardartmuseums.org/object?apikey=68411e70-914a-4159-822a-02b918deadc9&size=100&page=2",
-        "responsetime": "59 ms"
+        "responsetime": "44 ms"
     },
     "records": [
         {
