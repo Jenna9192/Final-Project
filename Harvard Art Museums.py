@@ -159,26 +159,42 @@ def create_harvard_full_data(data,cur,conn,index):
         #find medium
         medium = data[artwork]["classification"]
         cur.execute('SELECT id FROM  Harvard_mediums WHERE medium = ?', (medium,))
-        Medium_id = cur.fetchone()[0]
+        try:
+            Medium_id = cur.fetchone()[0]
+        except:
+            Medium_id = "N/A"
 
         #find culture
         culture = data[artwork]["culture"]
         cur.execute('SELECT id FROM  Harvard_cultures WHERE culture = ?', (culture,))
-        Culture_id = cur.fetchone()[0]
+        try:
+            Culture_id = cur.fetchone()[0]
+        except:
+            Culture_id = "N/A"
+     
+
 
         #find period 
         period = data[artwork]["period"]
         if period == None:
             period = "N/A"
         cur.execute('SELECT id FROM  Harvard_periods WHERE period = ?', (period,))
-        Period_id = cur.fetchone()[0]
+        
+        try:
+         Period_id = cur.fetchone()[0]
+        except:
+            Period_id = "N/A"
 
         #find century
         century = data[artwork]["century"]
         if century == None:
             century == "N/A"
         cur.execute('SELECT id FROM  Harvard_centuries WHERE century = ?', (century,))
-        Century_id = cur.fetchone()[0]
+        
+        try:
+            Century_id = cur.fetchone()[0]
+        except:
+            Century_id
     
 
         cur.execute('INSERT OR IGNORE INTO Harvard_data VALUES (?,?,?,?,?,?,?)', (id, Museum_id, Object_id, Medium_id, Culture_id, Period_id, Century_id))
