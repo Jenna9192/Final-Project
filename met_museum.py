@@ -328,7 +328,7 @@ def main():
     url = "https://collectionapi.metmuseum.org/public/collection/v1/objects"
     cache_all_pages(url, "met_data.json")
     data = load_json("met_data.json")
-    cur1, conn1 = setUpDatabase("met_database.db")
+    cur1, conn1 = setUpDatabase("all_database.db")
     make_period_data(data, cur1, conn1)
     make_medium_data(data, cur1, conn1)
     make_culture_data(data, cur1, conn1)
