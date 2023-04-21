@@ -344,7 +344,7 @@ def main():
         id = cur1.fetchall()
         if len(id) != 0:
             index = id[-1][0]
-        if (index == 100):
+        if (index >= 100):
             cur1.execute("DELETE FROM met_database")
             index = 0
         make_met_data(data, cur1, conn1, index)

@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
+import sqlite3
 import requests
+import os
 import re
 import csv
-import unittest
 
 def make_request(url):
     try:
@@ -54,10 +55,11 @@ def get_selected_objects(soup):
             
             artist = "NaN"
             obj_type = "object"
+            museum_Id = 1
             image = info.get("href")
 
-            # Format tuple to (title, artist, year, type, image)
-            tup = (title, artist, year, obj_type, image)
+            # Format tuple to (title, museum_Id, artist, year, type, image)
+            tup = [title, museum_Id, artist, year, obj_type, image]
             master.append(tup)
             
     return master
@@ -91,32 +93,122 @@ def get_selected_paintings(soup):
                 year = "NaN"
 
             obj_type = "paintings"
+            museum_Id = 1
             image = info.get("href")
 
-            # Format tuple to (title, artist, year, type, image)
-            tup = (obj_name, artist, year, obj_type, image)
+            # Format tuple to (title, museum id, artist, year, type, image)
+            tup = [obj_name, museum_Id, artist, year, obj_type, image]
             master.append(tup)
     
     return master
 
-def create_csv(data, filename):
+def get_citations(soup):
+    master = []
+    
+    tag = soup.find_all("div", class_="reflist")
+    references = tag[1].find_all("span", class_="reference-text")
+
+    for reference in references:
+        
+        # Find pattern for title and source
+        pattern = '("[^"]+")(?:\.\s)*(www\.\w+\.\w+|([^\.,\d]+))'
+        match = re.search(pattern, reference.text)
+
+        if match:
+            title = match.group(1)
+            source = match.group(2)
+        
+        else:
+            title = "NaN"
+            source = "NaN"
+        
+        # Find pattern for date
+        pattern_dt = ["([A-Z][a-z]+ \d+, \d{4})", "(?:\s|\()(\d{4})(?:\)|)"]
+        match_dt1 = re.search(pattern_dt[0], reference.text)
+        match_dt2 = re.search(pattern_dt[1], reference.text)
+
+        if match_dt1:
+            date = match_dt1[0]
+
+        elif match_dt2:
+            date = match_dt2.group(1)
+        
+        else:
+            "NaN"
+        
+        ref_link = reference.find("a")
+        try:
+            link = ref_link.get("href")
+        except:
+            link = "NaN"
+        
+        # Format tuple to (title, source, date, link)
+        tup = [title, source, date, link]
+        master.append(tup)
+
+    return master
+
+    # (website title, source, date, link)
+
+def create_csv(data, heading, filename):
     
     # Create output file
     with open(filename, "w") as out_file:
         csv_out = csv.writer(out_file)
     
         # write in header
-        header = ("Object Title",
-                "Artist",
-                "Year",
-                "Object Type",
-                "Image")
-        csv_out.writerow(header)
+        heading.insert(0, "Index")
+        csv_out.writerow(heading)
 
         # write in data
         data.sort(key = lambda x: x[2])
-        for listing in data:
-            csv_out.writerow(listing)
+        for i in range(len(data)):
+            data[i].insert(0, i+1)
+            csv_out.writerow(data[i])
+
+def setUpDatabase(db_name):
+    path = os.path.dirname(os.path.abspath(__file__))
+    
+    conn = sqlite3.connect(path+'/'+db_name)
+    cur = conn.cursor()
+    
+    return cur, conn
+
+def open_database(db_name):
+    path = os.path.dirname(os.path.abspath(__file__))
+    
+    conn = sqlite3.connect(path+'/'+db_name)
+    cur = conn.cursor()
+    
+    return cur, conn
+
+def create_works_data(file, cur, conn):
+    table_query = "CREATE TABLE IF NOT EXISTS selected_works (id INTEGER PRIMARY KEY, title TEXT, museum_Id INTEGER, artist TEXT, year TEXT, obj_Type TEXT, image TEXT)"
+    cur.execute(table_query)
+    
+    with open(file, "r") as f:
+        reader = csv.reader(f)
+        next(reader)
+        
+        for row in reader:
+            insert_query = "INSERT INTO selected_works (id, title, museum_Id, artist, year, obj_Type, image) VALUES (?, ?, ?, ?, ? ,?, ?)"
+            cur.execute(insert_query, row)
+        
+    conn.commit()
+
+def create_citations_data(file, cur, conn):
+    table_query = "CREATE TABLE IF NOT EXISTS citations (title TEXT, website TEXT, date TEXT, link TEXT)"
+    cur.execute(table_query)
+    
+    with open(file, "r") as f:
+        reader = csv.reader(f)
+        next(reader)
+        
+        for row in reader:
+            insert_query = "INSERT INTO citations (title, website, date, link) VALUES (?, ?, ?, ?)"
+            cur.execute(insert_query, row)
+        
+    conn.commit()
 
 def main():
     # Request content from MET wikipedia page
@@ -125,6 +217,12 @@ def main():
 
     # Create master list of all objects
     master_lst = []
+    select_works_header = ["Object Title",
+                           "Museum_Id",
+                           "Artist",
+                           "Year",
+                           "Object Type",
+                           "Image"]
 
     # Extract selected objects to add to master list
     select_objs = get_selected_objects(soup)
@@ -134,12 +232,44 @@ def main():
     select_ptngs = get_selected_paintings(soup)
     master_lst.extend(select_ptngs)
 
-    # Extract selected works from thumb images
+    # Create csv from selected works
+    create_csv(master_lst, select_works_header, "wiki_selected_works.csv")
 
-    create_csv(master_lst, "wiki_selected_works.csv")
+    # Extract citations and create csv from data
+    citations = get_citations(soup)
+    citations_header = ["Title",
+                        "Website",
+                        "Date",
+                        "Link"]
+    create_csv(citations, citations_header, "wiki_citations.csv")
 
-class TestAllMethods(unittest.TestCase):
-    pass
+    # Connect to database
+    index = 0
+    cur, conn = setUpDatabase("all_database.db")
+    
+    # Add wiki_selected_works.csv data to database
+    # Check if table exists
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='selected_works'")
+    # If table doesn't exist
+    if cur.fetchone() is None:
+        create_works_data("wiki_selected_works.csv", cur, conn) 
+    else:
+        cur.execute("SELECT id FROM selected_works")
+        id = cur.fetchall()
+        if len(id) != 0:
+            index = id[-1][0]
+        if (index == 65):
+            cur.execute("DELETE FROM selected_works")
+            index = 0
+        create_works_data("wiki_selected_works.csv", cur, conn) 
+
+    # Add wiki_citations.csv data to database
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
+    # If table doesn't exist
+    if cur.fetchone() is None:
+        create_citations_data("wiki_citations.csv", cur, conn) 
+    
+    conn.close()
 
 if __name__ == "__main__":
     main()
