@@ -194,7 +194,7 @@ def create_harvard_full_data(data,cur,conn,index):
         try:
             Century_id = cur.fetchone()[0]
         except:
-            Century_id
+            Century_id = "N/A"
     
 
         cur.execute('INSERT OR IGNORE INTO Harvard_data VALUES (?,?,?,?,?,?,?)', (id, Museum_id, Object_id, Medium_id, Culture_id, Period_id, Century_id))
