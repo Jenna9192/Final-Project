@@ -120,26 +120,12 @@ def create_period_data(data,cur,conn):
 
 
 
-def create_century_data(data,cur,conn):
-    centuries = []
-    for artwork in data:
-        cent = data[artwork]["century"]
-        if cent == None:
-            cent = "N/A"
-        if cent not in centuries:
-            centuries.append(cent)
-    cur.execute("CREATE TABLE IF NOT EXISTS Harvard_centuries(id INTEGER PRIMARY KEY, century TEXT UNIQUE)")
-    for i in range(len(centuries)):
-        cur.execute("INSERT OR IGNORE INTO Harvard_centuries(id, century) VALUES (?,?)", (i+1, centuries[i]))
-    conn.commit()
 
 
-
-
-#make a table featuring id, museum id, object id, medium, culture, period, century, artist? - add later once debugged?
+#make a table featuring id, museum id, object id, medium, culture, period
 def create_harvard_full_data(data,cur,conn,index):
     cur.execute('CREATE TABLE IF NOT EXISTS Harvard_data(id INTEGER PRIMARY KEY, Museum_id INTEGER, Object_id INTEGER,\
-                 Medium_id INTEGER, Culture_id INTEGER, Period_id INTEGER, Century_id INTEGER)')
+                 Medium_id INTEGER, Culture_id INTEGER, Period_id INTEGER)')
     
     
     #find values to be entered in each field
@@ -185,19 +171,9 @@ def create_harvard_full_data(data,cur,conn,index):
         except:
             Period_id = "N/A"
 
-        #find century
-        century = data[artwork]["century"]
-        if century == None:
-            century == "N/A"
-        cur.execute('SELECT id FROM  Harvard_centuries WHERE century = ?', (century,))
-        
-        try:
-            Century_id = cur.fetchone()[0]
-        except:
-            Century_id = "N/A"
     
 
-        cur.execute('INSERT OR IGNORE INTO Harvard_data VALUES (?,?,?,?,?,?,?)', (id, Museum_id, Object_id, Medium_id, Culture_id, Period_id, Century_id))
+        cur.execute('INSERT OR IGNORE INTO Harvard_data VALUES (?,?,?,?,?,?)', (id, Museum_id, Object_id, Medium_id, Culture_id, Period_id))
         
     conn.commit()
 
@@ -219,7 +195,6 @@ def main():
     create_medium_data(data,cur,conn)
     create_culture_data(data,cur,conn)
     create_period_data(data,cur,conn)
-    create_century_data(data,cur,conn)
 
    
     #create full table:

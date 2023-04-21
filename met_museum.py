@@ -156,35 +156,10 @@ def make_culture_data(data, cur, conn):
         cur.execute("INSERT OR IGNORE INTO met_cultures (id, culture) VALUES (?,?)",(i, cultures[i]))
     conn.commit()
 
-def make_location_data(data, cur, conn):
-    locations = []
-    for art in data:
-        location = data[art]["region"]
-        if (len(location)== 0):
-            location = data[art]["subregion"]
-            if (len(location)== 0):
-                location = data[art]["country"]
-                if (len(location)== 0):
-                    location = data[art]["county"]
-                    if (len(location)== 0):
-                        location = data[art]["state"]
-                        if (len(location)== 0):
-                            location = data[art]["city"]
-                            if (len(location)== 0):
-                                location = 'N/A'
-        word = "Iran"
-        if word in str(location):
-            location = word
-        if location not in locations:
-            locations.append(location)
-    cur.execute("CREATE TABLE IF NOT EXISTS met_locations (id INTEGER PRIMARY KEY, location TEXT UNIQUE)")
-    for i in range(0,len(locations)):
-        cur.execute("INSERT OR IGNORE INTO met_locations (id, location) VALUES (?,?)",(i, locations[i]))
-    conn.commit()
 
 
 def make_met_data(data, cur, conn, index):
-    cur.execute("CREATE TABLE IF NOT EXISTS met_database (id INTEGER PRIMARY KEY, Museum_id INTEGER, object_id INTEGER, title TEXT, artist TEXT, year INTEGER, medium_id INTEGER, culture_id INTEGER, location_id INTEGER, Period_id INTEGER)")
+    cur.execute("CREATE TABLE IF NOT EXISTS met_database (id INTEGER PRIMARY KEY, Museum_id INTEGER, object_id INTEGER, year INTEGER, medium_id INTEGER, culture_id INTEGER, Period_id INTEGER)")
     for i in range(25):
         index += 1
         art = list(data.keys())
@@ -192,10 +167,6 @@ def make_met_data(data, cur, conn, index):
         art = art[place]
         museum_id = 1
         object_id = data[art]["objectID"]
-        title = data[art]["title"]
-        artist = data[art]["artistDisplayName"]
-        if len(artist) == 0:
-            artist = "N/A"
         year = data[art]["objectEndDate"]
 
         #identify medium
@@ -259,26 +230,6 @@ def make_met_data(data, cur, conn, index):
             culture = 'N/A'
         culture_id = culture_dict[culture]
         
-        #identify location
-        cur.execute("SELECT location, id FROM met_locations")
-        location_dict = dict(cur.fetchall())
-        location = data[art]["region"]
-        if (len(location)== 0):
-            location = data[art]["subregion"]
-            if (len(location)== 0):
-                location = data[art]["country"]
-                if (len(location)== 0):
-                    location = data[art]["county"]
-                    if (len(location)== 0):
-                        location = data[art]["state"]
-                        if (len(location)== 0):
-                            location = data[art]["city"]
-                            if (len(location)== 0):
-                                location = 'N/A'
-        word = "Iran"
-        if word in str(location):
-            location = word
-        location_id = location_dict[location]
         
         #identify period
         cur.execute("SELECT period, id FROM met_periods")
@@ -305,15 +256,12 @@ def make_met_data(data, cur, conn, index):
         art = int(art)
         museum_id = int(museum_id)
         object_id = int(object_id)
-        title = str(title)
-        artist = str(artist)
         year = int(year)
         medium_id = int(medium_id)
         culture_id = int(culture_id)
-        location_id = int(location_id)
         period_id = int(period_id)
         
-        cur.execute("INSERT OR IGNORE INTO met_database (id, Museum_id, object_id, title, artist, year, medium_id, culture_id, location_id, period_id) VALUES (?,?,?,?,?,?,?,?,?,?)",(art, museum_id, object_id, title, artist, year, medium_id, culture_id, location_id, period_id))
+        cur.execute("INSERT OR IGNORE INTO met_database (id, Museum_id, object_id, year, medium_id, culture_id, period_id) VALUES (?,?,?,?,?,?,?)",(art, museum_id, object_id, year, medium_id, culture_id, period_id))
         
 
 
@@ -332,7 +280,6 @@ def main():
     make_period_data(data, cur1, conn1)
     make_medium_data(data, cur1, conn1)
     make_culture_data(data, cur1, conn1)
-    make_location_data(data, cur1, conn1)
     index = 0
     #check if the database exist
     cur1.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='met_database'")
