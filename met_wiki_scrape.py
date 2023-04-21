@@ -182,7 +182,7 @@ def open_database(db_name):
     
     return cur, conn
 
-def create_data(file, cur, conn):
+def create_works_data(file, cur, conn):
     table_query = "CREATE TABLE IF NOT EXISTS selected_works (id INTEGER PRIMARY KEY, title TEXT, museum_Id INTEGER, artist TEXT, year TEXT, obj_Type TEXT, image TEXT)"
     cur.execute(table_query)
     
@@ -195,7 +195,20 @@ def create_data(file, cur, conn):
             cur.execute(insert_query, row)
         
     conn.commit()
-    conn.close()
+
+def create_citations_data(file, cur, conn):
+    table_query = "CREATE TABLE IF NOT EXISTS citations (title TEXT, website TEXT, date TEXT, link TEXT)"
+    cur.execute(table_query)
+    
+    with open(file, "r") as f:
+        reader = csv.reader(f)
+        next(reader)
+        
+        for row in reader:
+            insert_query = "INSERT INTO citations (title, website, date, link) VALUES (?, ?, ?, ?)"
+            cur.execute(insert_query, row)
+        
+    conn.commit()
 
 def main():
     # Request content from MET wikipedia page
@@ -230,15 +243,16 @@ def main():
                         "Link"]
     create_csv(citations, citations_header, "wiki_citations.csv")
 
-    # Add wiki_selected_works.csv data to database
+    # Connect to database
     index = 0
     cur, conn = setUpDatabase("all_database.db")
-    #check if the database exist
     
+    # Add wiki_selected_works.csv data to database
+    # Check if table exists
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='selected_works'")
-    #if does not exist
+    # If table doesn't exist
     if cur.fetchone() is None:
-        create_data("wiki_selected_works.csv", cur, conn) 
+        create_works_data("wiki_selected_works.csv", cur, conn) 
     else:
         cur.execute("SELECT id FROM selected_works")
         id = cur.fetchall()
@@ -247,8 +261,15 @@ def main():
         if (index == 65):
             cur.execute("DELETE FROM selected_works")
             index = 0
-        create_data("wiki_selected_works.csv", cur, conn) 
+        create_works_data("wiki_selected_works.csv", cur, conn) 
 
+    # Add wiki_citations.csv data to database
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
+    # If table doesn't exist
+    if cur.fetchone() is None:
+        create_citations_data("wiki_citations.csv", cur, conn) 
+    
+    conn.close()
 
 if __name__ == "__main__":
     main()
