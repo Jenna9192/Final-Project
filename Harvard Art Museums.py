@@ -83,7 +83,10 @@ def create_medium_data(data,cur,conn):
     #table length 8
     mediums = []
     for artwork in data:
-        if data[artwork]["classification"] not in mediums:
+        medium = data[artwork]["classification"]
+        if len(medium) == 0:
+            medium = "N/A"
+        if medium not in mediums:
             mediums.append(data[artwork]["classification"])
 
     cur.execute("CREATE TABLE IF NOT EXISTS Harvard_mediums (id INTEGER PRIMARY KEY, medium TEXT UNIQUE)")
@@ -96,7 +99,10 @@ def create_culture_data(data,cur,conn):
     #table length 14
     cultures = []
     for artwork in data:
-        if data[artwork]["culture"] not in cultures:
+        culture = data[artwork]["culture"]
+        if len(culture) == 0:
+            culture = "N/A"
+        if culture not in cultures:
             cultures.append(data[artwork]["culture"])
     cur.execute("CREATE TABLE IF NOT EXISTS Harvard_cultures (id INTEGER PRIMARY KEY, culture TEXT UNIQUE)")
     for i in range(len(cultures)):
@@ -148,7 +154,7 @@ def create_harvard_full_data(data,cur,conn,index):
         try:
             Medium_id = cur.fetchone()[0]
         except:
-            Medium_id = "N/A"
+            Medium_id = None #is this allowed
 
         #find culture
         culture = data[artwork]["culture"]
@@ -156,20 +162,19 @@ def create_harvard_full_data(data,cur,conn,index):
         try:
             Culture_id = cur.fetchone()[0]
         except:
-            Culture_id = "N/A"
+            Culture_id = None  #WILL IT LET ME DO THIS?
      
 
 
         #find period 
         period = data[artwork]["period"]
         if period == None:
-            period = "N/A"
+            period = 1
         cur.execute('SELECT id FROM  Harvard_periods WHERE period = ?', (period,))
-        
         try:
          Period_id = cur.fetchone()[0]
         except:
-            Period_id = "N/A"
+            Period_id = 1
 
     
 
