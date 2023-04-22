@@ -148,8 +148,6 @@ def get_citations(soup):
 
     return master
 
-    # (website title, source, date, link)
-
 def create_csv(data, heading, filename):
     
     # Create output file
@@ -174,39 +172,85 @@ def setUpDatabase(db_name):
     
     return cur, conn
 
-def open_database(db_name):
-    path = os.path.dirname(os.path.abspath(__file__))
-    
-    conn = sqlite3.connect(path+'/'+db_name)
-    cur = conn.cursor()
-    
-    return cur, conn
-
-def create_works_data(file, cur, conn):
-    table_query = "CREATE TABLE IF NOT EXISTS selected_works (id INTEGER PRIMARY KEY, title TEXT, museum_Id INTEGER, artist TEXT, year TEXT, obj_Type TEXT, image TEXT)"
-    cur.execute(table_query)
-    
+def extract_data(file):
     with open(file, "r") as f:
         reader = csv.reader(f)
         next(reader)
         
+        data = []
         for row in reader:
-            insert_query = "INSERT INTO selected_works (id, title, museum_Id, artist, year, obj_Type, image) VALUES (?, ?, ?, ?, ? ,?, ?)"
-            cur.execute(insert_query, row)
+            tup = tuple(row)
+            data.append(tup)
+    return data
+
+def create_objType_data(cur, conn):
+    cur.execute('CREATE TABLE IF NOT EXISTS wiki_objType (id INTEGER PRIMARY KEY, object_Type TEXT)')
+    table_dict = {1:"object", 2: "paintings"}
+    
+    for i in range(1,3):
+        cur.execute("INSERT OR IGNORE INTO wiki_objType (id, object_Type) Values(? ,? )", (i, table_dict[i]))
+    conn.commit()
+
+def create_artist_data(data, cur, conn):
+    artists = []
+    for object in data:
+        if object[3] not in artists:
+            artists.append(object[3])
+    
+    cur.execute("CREATE TABLE IF NOT EXISTS wiki_artists (id INTEGER PRIMARY KEY, artist TEXT)")
+    
+    for i in range(len(artists)):
+        cur.execute("INSERT OR IGNORE INTO wiki_artists (id, artist) VALUES (?,?)", (i+1,artists[i]))
+    conn.commit()
+
+def create_works_data(data, cur, conn, index):
+    table_query = "CREATE TABLE IF NOT EXISTS selected_works (id INTEGER PRIMARY KEY, title TEXT, museum_Id INTEGER, artist_Id INTEGER, year TEXT, objType_Id INTEGER, image TEXT)"
+    cur.execute(table_query)
+    
+    for i in range(25):
+        index += 1
+        
+        try:
+            obj_id = data[index][0]
+            obj_title = data[index][1]
+            museum_id = data[index][2]
+            year = data[index][4]
+            image = data[index][6]
+
+            artist = data[index][3]
+            cur.execute('SELECT id FROM wiki_artists WHERE artist = ?', (artist,))
+            artist_id = cur.fetchone()[0]
+
+            obj_Type = data[index][5]
+            #print(obj_Type)
+            cur.execute('SELECT id FROM wiki_objType WHERE object_Type = ?', (obj_Type,))
+            try:
+                objType_id = cur.fetchone()[0]
+            except:
+                objType_id = 1
+            
+            
+            insert_query = "INSERT OR IGNORE INTO selected_works (id, title, museum_Id, artist_Id, year, objType_Id, image) VALUES (?,?,?,?,?,?,?)"
+            cur.execute(insert_query, (obj_id, obj_title, museum_id, artist_id, year, objType_id, image))
+
+        except IndexError:
+            break
+
+        
         
     conn.commit()
 
-def create_citations_data(file, cur, conn):
-    table_query = "CREATE TABLE IF NOT EXISTS citations (title TEXT, website TEXT, date TEXT, link TEXT)"
+def create_citations_data(data, cur, conn, index):
+    table_query = "CREATE TABLE IF NOT EXISTS citations (id INTEGER PRIMARY KEY, title TEXT, website TEXT, date TEXT, link TEXT)"
     cur.execute(table_query)
-    
-    with open(file, "r") as f:
-        reader = csv.reader(f)
-        next(reader)
-        
-        for row in reader:
-            insert_query = "INSERT INTO citations (title, website, date, link) VALUES (?, ?, ?, ?)"
-            cur.execute(insert_query, row)
+
+    for i in range(25):
+        index += 1
+        try:
+            insert_query = "INSERT INTO citations (id, title, website, date, link) VALUES (?, ?, ?, ?, ?)"
+            cur.execute(insert_query, data[index])
+        except IndexError:
+            break
         
     conn.commit()
 
@@ -244,30 +288,46 @@ def main():
     create_csv(citations, citations_header, "wiki_citations.csv")
 
     # Connect to database
-    index = 0
     cur, conn = setUpDatabase("all_database.db")
     
+    # Extract data from csv files
+    select_works_data = extract_data("wiki_selected_works.csv")
+    citations_data = extract_data("wiki_citations.csv")
+   
+    # Set up ID tables
+    create_objType_data(cur, conn)
+    create_artist_data(select_works_data, cur, conn)
+    
     # Add wiki_selected_works.csv data to database
-    # Check if table exists
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='selected_works'")
     # If table doesn't exist
+    index_works = 0
     if cur.fetchone() is None:
-        create_works_data("wiki_selected_works.csv", cur, conn) 
+        create_works_data(select_works_data, cur, conn, index_works) 
     else:
         cur.execute("SELECT id FROM selected_works")
         id = cur.fetchall()
         if len(id) != 0:
-            index = id[-1][0]
-        if (index == 65):
-            cur.execute("DELETE FROM selected_works")
-            index = 0
-        create_works_data("wiki_selected_works.csv", cur, conn) 
+            index_works = id[-1][0]
+            create_works_data(select_works_data, cur, conn, index_works)
+        else: 
+            index_works = 0
+            create_works_data(select_works_data, cur, conn, index_works)   
 
     # Add wiki_citations.csv data to database
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='citations'")
     # If table doesn't exist
+    index_cite = 0
     if cur.fetchone() is None:
-        create_citations_data("wiki_citations.csv", cur, conn) 
+        create_citations_data(citations_data, cur, conn, index_cite) 
+    else:
+        cur.execute("SELECT id FROM citations")
+        id = cur.fetchall()
+        if len(id) != 0 and (index_cite <= 100):
+            index_cite = id[-1][0]
+            create_citations_data(citations_data, cur, conn, index_cite)
+        else:
+            pass
     
     conn.close()
 

@@ -84,7 +84,7 @@ def create_medium_data(data,cur,conn):
     mediums = []
     for artwork in data:
         medium = data[artwork]["classification"]
-        if len(medium) == 0:
+        if type(medium) == 0:
             medium = "N/A"
         if medium not in mediums:
             mediums.append(data[artwork]["classification"])
@@ -100,7 +100,7 @@ def create_culture_data(data,cur,conn):
     cultures = []
     for artwork in data:
         culture = data[artwork]["culture"]
-        if len(culture) == 0:
+        if type(culture) is None:
             culture = "N/A"
         if culture not in cultures:
             cultures.append(data[artwork]["culture"])
@@ -114,7 +114,7 @@ def create_period_data(data,cur,conn):
     periods = []
     for artwork in data:
         period = data[artwork]["period"]
-        if period == None:
+        if type(period) is None:
             period = "N/A"
 
         if period not in periods:

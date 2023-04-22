@@ -43,6 +43,7 @@ def calc_mediums(db_name, cur, conn):
             medium_lst.append(current_medium)
 
 
+
     medium_dict = {}
     for medium in medium_lst:
         medium_dict[medium] = 0
@@ -58,6 +59,15 @@ def calc_mediums(db_name, cur, conn):
     met_medium_each = cur.fetchall()
     for medium in met_medium_each:
         medium_dict[medium[0]] += 1
+
+    cur.execute("SELECT objType_id FROM selected_works")
+    met_wiki_each = cur.fetchall()
+    medium_dict["unspecified object"] = 0
+    for num in met_wiki_each:
+        if num == 2:
+            medium_dict["Paintings"]+=1
+        else:
+            medium_dict["unspecified object"] += 1
 
 
     conn.commit()
@@ -80,26 +90,37 @@ def calc_period(db_name, cur, conn):
     
     cur.execute("SELECT Harvard_periods.period FROM Harvard_periods")
     harvard_period = cur.fetchall()
-    for period in harvard_period:
-        current_period = period[0]
+    print(harvard_period)
+    for period in harvard_period[1:]:
+        try:
+            current_period = period[0]
+        except:
+            continue
         if current_period not in period_lst:
             period_lst.append(current_period)
-
+    
+    
+    
     period_dict = {}
+
+    
     for period in period_lst:
         period_dict[period] = 0
+
+    
 
     
     cur.execute("SELECT met_periods.period FROM met_periods JOIN met_database ON met_periods.id = met_database.Period_id")
     met_period_each = cur.fetchall()
     for period in met_period_each:
-        period_dict[period[0]] += 1
-
+            period_dict[period[0]] += 1
+    
 
     cur.execute("SELECT Harvard_periods.period FROM Harvard_periods JOIN Harvard_data ON Harvard_periods.id = Harvard_data.Period_id")
     met_period_each = cur.fetchall()
     for period in met_period_each:
-        period_dict[period[0]] += 1
+        if period[0] is not None:
+            period_dict[period[0]] += 1
 
     conn.commit()
     return period_dict
@@ -122,7 +143,10 @@ def calc_culture(db_name, cur, conn):
     cur.execute("SELECT Harvard_cultures.culture FROM Harvard_cultures")
     harvard_culture = cur.fetchall()
     for culture in harvard_culture:
-        current_culture = culture[0]
+        try:
+            current_culture = culture[0]
+        except:
+            continue
         if current_culture not in culture_lst:
             culture_lst.append(current_culture)
 
@@ -146,6 +170,55 @@ def calc_culture(db_name, cur, conn):
     conn.commit()
     return culture_dict
 
+def visual_medium(medium_dict):
+    lst = []
+    counts = []
+    for k,v in medium_dict.items():
+        if k == "N/A":
+            continue
+        lst.append(k)
+        counts.append(v)
+    
+    #make visualization 
+    plt.barh(lst,counts,align = 'center')
+    plt.title("Number of artworks per medium") 
+    plt.xlabel("Count per Medium") 
+    plt.ylabel("Medium Name")
+    plt.show()
+
+def visual_culture(culture_dict):
+    lst = []
+    counts = []
+    for k,v in culture_dict.items():
+        if k == "N/A":
+            continue
+        lst.append(k)
+        counts.append(v)
+    
+    #make visualization 
+    plt.barh(lst,counts,align = 'center')
+    plt.title("Number of artworks per culture")
+    plt.xlabel("Count per culture")
+    plt.ylabel("Culture name")
+    plt.show()
+
+
+def visual_period(period_dict):
+    lst = []
+    counts = []
+    for k,v in period_dict.items():
+        if k == "N/A":
+            continue
+        lst.append(k)
+        counts.append(v)
+    
+    #make visualization 
+    plt.barh(lst,counts,align = 'center')
+    plt.title("Number of artworks per Period")
+    plt.xlabel("Count per period")
+    plt.ylabel("Period name")
+    plt.show()
+
 def main():
     cur, conn = open_database("all_database.db")
     calculation_data = {}
@@ -153,6 +226,13 @@ def main():
     calculation_data["period_sum_data"] = calc_period("all_database.db", cur, conn)
     calculation_data["culture_sum_data"] = calc_culture("all_database.db", cur, conn)
     write_json("calculation_results.JSON", calculation_data)
+    medium_dict = calc_mediums("all_database.db", cur, conn)
+    visual_medium(medium_dict)
+    culture_dict = calc_culture("all_database.db", cur, conn)
+    visual_culture(culture_dict)
+
+    period_dict = calc_period("all_database.db", cur, conn)
+    visual_period(period_dict)
 
 if __name__ == "__main__":
     main() 
